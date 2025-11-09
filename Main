@@ -1,18 +1,20 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-
+print("test 1")
 local localPlayer = Players.LocalPlayer
-local velocityMultiplier = 25000 -- strong fling power
-local orbitRadius = 8 -- how far you orbit around target
-local orbitSpeed = 20 -- how fast you orbit around them
-local verticalOffset = 2 -- height offset
+
+local velocityPower = 60000      -- how strong fling hits
+local orbitRadius = 6            -- how far you orbit around target
+local orbitSpeed = 30            -- radians per second (increase to go wild)
+local verticalOffset = 2         -- height difference from target
+local correctionForce = 0.3      -- how tightly it stays in orbit
 local forceCFrameEachStep = true
 
 local hrp, char
 local conn
 local flingActive = true
 
--- Get local HRP safely
+-- Get HRP safely
 local function getLocalHRP()
 	local chr = localPlayer.Character or localPlayer.CharacterAdded:Wait()
 	local root = chr:WaitForChild("HumanoidRootPart", 5) or chr:FindFirstChild("Torso")
@@ -41,29 +43,30 @@ local function startFling()
 
 		t += dt * orbitSpeed
 
+		-- Calculate orbit position
 		local orbitX = math.cos(t) * orbitRadius
 		local orbitZ = math.sin(t) * orbitRadius
 		local orbitPos = targetHRP.Position + Vector3.new(orbitX, verticalOffset, orbitZ)
 
-		local toTarget = targetHRP.Position - hrp.Position
-		local direction = toTarget.Unit
+		-- Direction toward target
+		local toTarget = (targetHRP.Position - hrp.Position)
+		local dist = toTarget.Magnitude
+		local dir = toTarget.Unit
 
-		-- push toward target to ensure constant collisions
-		local flingVector = direction * velocityMultiplier
+		-- Add constant violent fling velocity toward target
+		local flingVec = dir * velocityPower
 
 		pcall(function()
 			if hrp:IsA("BasePart") then
-				hrp.AssemblyLinearVelocity = flingVector + Vector3.new(0, 0, 0)
+				hrp.AssemblyLinearVelocity = flingVec + (orbitPos - hrp.Position) * (correctionForce * velocityPower * dt)
 			else
-				hrp.Velocity = flingVector
+				hrp.Velocity = flingVec + (orbitPos - hrp.Position) * (correctionForce * velocityPower * dt)
 			end
 		end)
 
+		-- Rotate toward target (helps with consistent contact)
 		if forceCFrameEachStep then
-			-- face the target while orbiting
-			hrp.CFrame = CFrame.lookAt(orbitPos, targetHRP.Position)
-		else
-			hrp.CFrame = CFrame.new(orbitPos)
+			hrp.CFrame = CFrame.lookAt(hrp.Position, targetHRP.Position)
 		end
 	end)
 end
@@ -77,7 +80,7 @@ local function stopFling()
 	end
 end
 
--- Initialize and start fling
+-- Setup fling
 local function setupCharacter(character)
 	hrp, char = getLocalHRP()
 	if not hrp then return end
@@ -99,4 +102,4 @@ if localPlayer.Character then
 	setupCharacter(localPlayer.Character)
 end
 
-print("[orbit-fling] active. Targeting:", _G.targetPlayerName)
+print("[violent-orbit-fling] active. Targeting:", _G.targetPlayerName)
