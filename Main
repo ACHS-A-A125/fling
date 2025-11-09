@@ -6,7 +6,7 @@ local localPlayer = Players.LocalPlayer
 local velocityMultiplier = 25000
 local orbitRadius = 1
 local orbitSpeed = 50
-local verticalOffset = 2
+local verticalOffset = -2
 local forceCFrameEachStep = true
 
 local hrp, char
