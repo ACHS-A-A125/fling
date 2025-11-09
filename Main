@@ -4,11 +4,8 @@ local RunService = game:GetService("RunService")
 local localPlayer = Players.LocalPlayer
 
 local velocityMultiplier = 25000
-local orbitRadius = 8
-local orbitSpeed = 20
-local verticalOffset = 2
 local forceCFrameEachStep = true
-local useOrbit = true -- set to false to disable orbiting
+local startDistance = 3 -- distance to start fling from target
 
 local hrp, char
 local conn
@@ -49,42 +46,30 @@ local function startFling(targetPlayer)
 		end)
 	end
 
-	local t = 0
-	conn = RunService.Heartbeat:Connect(function(dt)
+	-- Move close to target to start fling
+	local directionToTarget = (targetHRP.Position - hrp.Position).Unit
+	hrp.CFrame = CFrame.new(targetHRP.Position - directionToTarget * startDistance)
+
+	conn = RunService.Heartbeat:Connect(function()
 		if not flingActive then return end
 		if not targetHRP or not targetHRP.Parent then
 			stopFling()
 			return
 		end
 
-		t += dt * orbitSpeed
-
-		-- Calculate orbit position if enabled
-		local orbitPos = targetHRP.Position
-		if useOrbit then
-			local orbitX = math.cos(t) * orbitRadius
-			local orbitZ = math.sin(t) * orbitRadius
-			orbitPos = targetHRP.Position + Vector3.new(orbitX, verticalOffset, orbitZ)
-		end
-
 		local toTarget = targetHRP.Position - hrp.Position
 		if toTarget.Magnitude == 0 then return end
+
 		local flingVector = toTarget.Unit * velocityMultiplier
 
-		-- Apply velocity to fling
 		pcall(function()
 			if hrp:IsA("BasePart") then
 				hrp.AssemblyLinearVelocity = flingVector
 			end
 		end)
 
-		-- Face the target if enabled
 		if forceCFrameEachStep then
-			if useOrbit then
-				hrp.CFrame = CFrame.lookAt(orbitPos, targetHRP.Position)
-			else
-				hrp.CFrame = CFrame.lookAt(hrp.Position, targetHRP.Position)
-			end
+			hrp.CFrame = CFrame.lookAt(hrp.Position, targetHRP.Position)
 		end
 	end)
 end
