@@ -4,9 +4,6 @@ local RunService = game:GetService("RunService")
 local localPlayer = Players.LocalPlayer
 
 local velocityMultiplier = 25000
-local orbitRadius = 8
-local orbitSpeed = 20
-local verticalOffset = 2
 local forceCFrameEachStep = true
 
 local hrp, char
@@ -43,29 +40,22 @@ local function startFling(targetPlayer)
 	local targetHumanoid = targetPlayer.Character:FindFirstChildWhichIsA("Humanoid")
 	if targetHumanoid then
 		targetHumanoid.Died:Connect(function()
-			print("[orbit-fling] Target died, stopping fling.")
+			print("[fling] Target died, stopping fling.")
 			stopFling()
 		end)
 	end
 
-	local t = 0
-	conn = RunService.Heartbeat:Connect(function(dt)
+	conn = RunService.Heartbeat:Connect(function()
 		if not flingActive then return end
 		if not targetHRP or not targetHRP.Parent then
 			stopFling()
 			return
 		end
 
-		t += dt * orbitSpeed
-
-		local orbitX = math.cos(t) * orbitRadius
-		local orbitZ = math.sin(t) * orbitRadius
-		local orbitPos = targetHRP.Position + Vector3.new(orbitX, verticalOffset, orbitZ)
-
-		local toTarget = (targetHRP.Position - hrp.Position)
+		local toTarget = targetHRP.Position - hrp.Position
 		if toTarget.Magnitude == 0 then return end
-		local direction = toTarget.Unit
-		local flingVector = direction * velocityMultiplier
+
+		local flingVector = toTarget.Unit * velocityMultiplier
 
 		pcall(function()
 			if hrp:IsA("BasePart") then
@@ -73,10 +63,9 @@ local function startFling(targetPlayer)
 			end
 		end)
 
+		-- Optionally face the target
 		if forceCFrameEachStep then
-			hrp.CFrame = CFrame.lookAt(orbitPos, targetHRP.Position)
-		else
-			hrp.CFrame = CFrame.new(orbitPos)
+			hrp.CFrame = CFrame.lookAt(hrp.Position, targetHRP.Position)
 		end
 	end)
 end
@@ -89,7 +78,7 @@ local function setupCharacter(character)
 	local humanoid = char:FindFirstChildWhichIsA("Humanoid")
 	if humanoid then
 		humanoid.Died:Connect(function()
-			print("[orbit-fling] You died, stopping fling.")
+			print("[fling] You died, stopping fling.")
 			stopFling()
 		end)
 	end
@@ -98,7 +87,7 @@ local function setupCharacter(character)
 	if targetPlayer then
 		startFling(targetPlayer)
 	else
-		warn("[orbit-fling] No target found:", _G.targetPlayerName)
+		warn("[fling] No target found:", _G.targetPlayerName)
 	end
 end
 
@@ -112,4 +101,4 @@ if localPlayer.Character then
 	setupCharacter(localPlayer.Character)
 end
 
-print("[orbit-fling] active. Targeting:", _G.targetPlayerName)
+print("[fling] active. Targeting:", _G.targetPlayerName)
