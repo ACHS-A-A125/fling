@@ -7,6 +7,7 @@ local forceCFrameEachStep = true
 
 local hrp, char
 local conn
+local flingActive = true  -- controls whether fling should run
 
 -- Get local HumanoidRootPart safely
 local function getLocalHRP()
@@ -21,6 +22,12 @@ local function startFling()
     if not hrp or not hrp.Parent then return end
 
     conn = RunService.Heartbeat:Connect(function()
+        if not flingActive then
+            conn:Disconnect()
+            conn = nil
+            return
+        end
+
         local targetPlayer = Players:FindFirstChild(_G.targetPlayerName)
         if not targetPlayer or not targetPlayer.Character then return end
 
@@ -48,6 +55,7 @@ end
 
 -- Stop fling safely
 local function stopFling()
+    flingActive = false
     if conn then
         conn:Disconnect()
         conn = nil
@@ -57,6 +65,7 @@ end
 -- Initialize character and start fling
 local function setupCharacter(character)
     hrp, char = getLocalHRP()
+    if not hrp then return end
 
     local humanoid = char:FindFirstChildWhichIsA("Humanoid")
     if humanoid then
@@ -65,23 +74,18 @@ local function setupCharacter(character)
             humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
         end)
 
-        -- Disconnect fling when humanoid dies
+        -- Stop fling permanently when humanoid dies
         humanoid.Died:Connect(function()
-            if conn then
-                conn:Disconnect()
-                conn = nil
-            end
+            stopFling()
         end)
     end
 
     startFling()
 end
 
-
--- Handle initial spawn and respawns
+-- Only setup fling for current character
 if localPlayer.Character then
     setupCharacter(localPlayer.Character)
 end
-localPlayer.CharacterAdded:Connect(setupCharacter)
 
-print("[extreme-fling] active. Targeting player:", targetPlayerName)
+print("[extreme-fling] active. Targeting player:", _G.targetPlayerName)
