@@ -21,7 +21,7 @@ local function startFling()
     if not hrp or not hrp.Parent then return end
 
     conn = RunService.Heartbeat:Connect(function()
-        local targetPlayer = Players:FindFirstChild(targetPlayerName)
+        local targetPlayer = Players:FindFirstChild(_G.targetPlayerName)
         if not targetPlayer or not targetPlayer.Character then return end
 
         local targetHRP = targetPlayer.Character:FindFirstChild("HumanoidRootPart") 
