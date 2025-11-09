@@ -77,7 +77,9 @@ local function startFling(targetPlayer)
 			-- Lying down orientation
 			local lookVector = targetHRP.Position - orbitPos
 			if lookVector.Magnitude ~= 0 then
-				hrp.CFrame = CFrame.fromMatrix(orbitPos, lookVector.Unit, Vector3.new(0,0,-1))
+				local lookUnit = lookVector.Unit
+				local upVector = Vector3.new(0,0,-1)
+				hrp.CFrame = CFrame.fromMatrix(orbitPos, lookUnit, upVector)
 			end
 		else
 			-- Optional upright version
