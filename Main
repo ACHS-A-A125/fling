@@ -64,10 +64,19 @@ local function setupCharacter(character)
             humanoid.PlatformStand = false
             humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
         end)
+
+        -- Disconnect fling when humanoid dies
+        humanoid.Died:Connect(function()
+            if conn then
+                conn:Disconnect()
+                conn = nil
+            end
+        end)
     end
 
     startFling()
 end
+
 
 -- Handle initial spawn and respawns
 if localPlayer.Character then
