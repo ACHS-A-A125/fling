@@ -12,6 +12,7 @@ local forceCFrameEachStep = true
 local hrp, char
 local conn
 local flingActive = true
+local stoppedPermanently = false -- New flag
 
 -- Get HRP safely
 local function getLocalHRP()
@@ -23,6 +24,7 @@ end
 -- Stop fling safely
 local function stopFling()
 	flingActive = false
+	stoppedPermanently = true -- mark that we should never restart
 	if conn then
 		conn:Disconnect()
 		conn = nil
@@ -34,6 +36,7 @@ local function startFling(targetPlayer)
 	if conn then conn:Disconnect() end
 	if not hrp or not hrp.Parent then return end
 	if not targetPlayer or not targetPlayer.Character then return end
+	if stoppedPermanently then return end -- don't start if we've stopped permanently
 
 	flingActive = true
 	local targetHRP = targetPlayer.Character:FindFirstChild("HumanoidRootPart") or targetPlayer.Character:FindFirstChild("Torso")
@@ -83,13 +86,14 @@ end
 
 -- Character setup
 local function setupCharacter(character)
+	if stoppedPermanently then return end -- prevent setup after death
 	hrp, char = getLocalHRP()
 	if not hrp then return end
 
 	local humanoid = char:FindFirstChildWhichIsA("Humanoid")
 	if humanoid then
 		humanoid.Died:Connect(function()
-			print("[orbit-fling] You died, stopping fling.")
+			print("[orbit-fling] You died, stopping fling permanently.")
 			stopFling()
 		end)
 	end
@@ -104,6 +108,7 @@ end
 
 -- Handle respawn
 localPlayer.CharacterAdded:Connect(function(char)
+	if stoppedPermanently then return end -- do nothing if fling was stopped
 	task.wait(1)
 	setupCharacter(char)
 end)
@@ -113,6 +118,3 @@ if localPlayer.Character then
 end
 
 print("[orbit-fling] active. Targeting:", _G.targetPlayerName)
-
-
-
