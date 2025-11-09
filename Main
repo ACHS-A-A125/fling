@@ -1,6 +1,6 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-
+print("working")
 local localPlayer = Players.LocalPlayer
 local velocityMultiplier = 50000 -- strong fling power
 local orbitRadius = 4 -- how far you orbit around target
