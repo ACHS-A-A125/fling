@@ -1,1 +1,78 @@
---script (lua)
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local localPlayer = Players.LocalPlayer
+local velocityMultiplier = 20000
+local forceCFrameEachStep = true
+
+local hrp, char
+local conn
+
+-- Get local HumanoidRootPart safely
+local function getLocalHRP()
+    local chr = localPlayer.Character or localPlayer.CharacterAdded:Wait()
+    local root = chr:WaitForChild("HumanoidRootPart", 5) or chr:FindFirstChild("Torso")
+    return root, chr
+end
+
+-- Start fling loop
+local function startFling()
+    if conn then conn:Disconnect() end
+    if not hrp or not hrp.Parent then return end
+
+    conn = RunService.Heartbeat:Connect(function()
+        local targetPlayer = Players:FindFirstChild(targetPlayerName)
+        if not targetPlayer or not targetPlayer.Character then return end
+
+        local targetHRP = targetPlayer.Character:FindFirstChild("HumanoidRootPart") 
+                        or targetPlayer.Character:FindFirstChild("Torso")
+        if not targetHRP then return end
+
+        local toTarget = targetHRP.Position - hrp.Position
+        local direction = (toTarget.Magnitude > 0.0001) and toTarget.Unit or Vector3.new(0,0,0)
+
+        pcall(function()
+            if hrp:IsA("BasePart") then
+                hrp.AssemblyLinearVelocity = direction * velocityMultiplier
+            else
+                hrp.Velocity = direction * velocityMultiplier
+            end
+        end)
+
+        if forceCFrameEachStep then
+            local lookVec = hrp.CFrame.LookVector
+            hrp.CFrame = CFrame.new(targetHRP.Position, targetHRP.Position + lookVec)
+        end
+    end)
+end
+
+-- Stop fling safely
+local function stopFling()
+    if conn then
+        conn:Disconnect()
+        conn = nil
+    end
+end
+
+-- Initialize character and start fling
+local function setupCharacter(character)
+    hrp, char = getLocalHRP()
+
+    local humanoid = char:FindFirstChildWhichIsA("Humanoid")
+    if humanoid then
+        pcall(function()
+            humanoid.PlatformStand = false
+            humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+        end)
+    end
+
+    startFling()
+end
+
+-- Handle initial spawn and respawns
+if localPlayer.Character then
+    setupCharacter(localPlayer.Character)
+end
+localPlayer.CharacterAdded:Connect(setupCharacter)
+
+print("[extreme-fling] active. Targeting player:", targetPlayerName)
