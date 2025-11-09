@@ -74,9 +74,15 @@ local function startFling(targetPlayer)
 		end)
 
 		if forceCFrameEachStep then
-			hrp.CFrame = CFrame.lookAt(orbitPos, targetHRP.Position)
+		    -- Look at the target, but rotate 90 degrees forward (lying down)
+		    local lookVector = (targetHRP.Position - orbitPos).Unit
+		    local upVector = Vector3.new(0, 0, -1) -- this points "down" relative to character
+		    hrp.CFrame = CFrame.fromMatrix(orbitPos, lookVector, upVector)
 		else
-			hrp.CFrame = CFrame.new(orbitPos)
+		    -- Keep upright version if desired
+		    hrp.CFrame = CFrame.new(orbitPos) * CFrame.Angles(math.rad(90), 0, 0)
+		end
+
 		end
 	end)
 end
