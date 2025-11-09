@@ -12,6 +12,7 @@ local forceCFrameEachStep = true
 local hrp, char
 local conn
 local flingActive = false
+local stopCompletely = false -- New flag to fully stop after death
 
 -- Get HRP safely
 local function getLocalHRP()
@@ -32,6 +33,7 @@ end
 -- Start fling loop
 local function startFling(targetPlayer)
 	stopFling() -- make sure old fling is disconnected
+	if stopCompletely then return end -- prevent starting fling if player has died
 
 	if not hrp or not hrp.Parent then return end
 	if not targetPlayer or not targetPlayer.Character then return end
@@ -88,14 +90,16 @@ end
 
 -- Character setup
 local function setupCharacter(character)
+	if stopCompletely then return end -- Prevent fling setup if player died
 	hrp, char = getLocalHRP()
 	if not hrp then return end
 
 	local humanoid = char:FindFirstChildWhichIsA("Humanoid")
 	if humanoid then
 		humanoid.Died:Connect(function()
-			print("[orbit-fling] You died, stopping fling.")
+			print("[orbit-fling] You died, stopping fling permanently.")
 			stopFling()
+			stopCompletely = true -- Flag to prevent respawn fling
 		end)
 	end
 
@@ -113,6 +117,7 @@ localPlayer.CharacterAdded:Connect(function(char)
 	setupCharacter(char)
 end)
 
+-- Initial setup
 if localPlayer.Character then
 	setupCharacter(localPlayer.Character)
 end
