@@ -3,7 +3,7 @@ local RunService = game:GetService("RunService")
 
 local localPlayer = Players.LocalPlayer
 
-local velocityMultiplier = 50000
+local velocityMultiplier = 25000
 local forceCFrameEachStep = true
 
 local hrp, char
