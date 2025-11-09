@@ -3,89 +3,85 @@ local RunService = game:GetService("RunService")
 
 local localPlayer = Players.LocalPlayer
 local velocityMultiplier = 10000
-local forceCFrameEachStep = true
-
-local hrp, char
+local flingActive = true
 local conn
-local flingActive = true  -- controls whether fling should run
 
--- Get local HumanoidRootPart safely
+-- safer HRP getter
 local function getLocalHRP()
-    local chr = localPlayer.Character or localPlayer.CharacterAdded:Wait()
-    local root = chr:WaitForChild("HumanoidRootPart", 5) or chr:FindFirstChild("Torso")
-    return root, chr
+	local char = localPlayer.Character
+	if not char or not char.Parent then return nil, nil end
+	local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
+	return root, char
 end
 
--- Start fling loop
+-- smooth fling behavior loop
 local function startFling()
-    if conn then conn:Disconnect() end
-    if not hrp or not hrp.Parent then return end
+	if conn then conn:Disconnect() end
+	flingActive = true
 
-    conn = RunService.Heartbeat:Connect(function()
-        if not flingActive then
-            conn:Disconnect()
-            conn = nil
-            return
-        end
+	conn = RunService.Heartbeat:Connect(function()
+		local hrp, char = getLocalHRP()
+		if not hrp or not flingActive then
+			if conn then conn:Disconnect() conn = nil end
+			return
+		end
 
-        local targetPlayer = Players:FindFirstChild(_G.targetPlayerName)
-        if not targetPlayer or not targetPlayer.Character then return end
+		local targetPlayer = Players:FindFirstChild(_G.targetPlayerName)
+		if not targetPlayer or not targetPlayer.Character then return end
+		local targetHRP = targetPlayer.Character:FindFirstChild("HumanoidRootPart") or targetPlayer.Character:FindFirstChild("Torso")
+		if not targetHRP then return end
 
-        local targetHRP = targetPlayer.Character:FindFirstChild("HumanoidRootPart") 
-                        or targetPlayer.Character:FindFirstChild("Torso")
-        if not targetHRP then return end
+		-- calculate vector to target
+		local toTarget = targetHRP.Position - hrp.Position
+		local direction = (toTarget.Magnitude > 0.001) and toTarget.Unit or Vector3.new()
 
-        local toTarget = targetHRP.Position - hrp.Position
-        local direction = (toTarget.Magnitude > 0.0001) and toTarget.Unit or Vector3.new(0,0,0)
+		-- mimic “walkfling” style velocity control
+		local vel = hrp.AssemblyLinearVelocity
+		local movel = 0.1
 
-        pcall(function()
-            if hrp:IsA("BasePart") then
-                hrp.AssemblyLinearVelocity = direction * velocityMultiplier
-            else
-                hrp.Velocity = direction * velocityMultiplier
-            end
-        end)
-
-        if forceCFrameEachStep then
-            local lookVec = hrp.CFrame.LookVector
-            hrp.CFrame = CFrame.new(targetHRP.Position, targetHRP.Position + lookVec)
-        end
-    end)
+		-- violent directional fling like walkfling
+		hrp.AssemblyLinearVelocity = (direction * velocityMultiplier) + Vector3.new(0, velocityMultiplier, 0)
+		RunService.RenderStepped:Wait()
+		hrp.AssemblyLinearVelocity = vel
+		RunService.Stepped:Wait()
+		hrp.AssemblyLinearVelocity = vel + Vector3.new(0, movel, 0)
+	end)
 end
 
--- Stop fling safely
 local function stopFling()
-    flingActive = false
-    if conn then
-        conn:Disconnect()
-        conn = nil
-    end
+	flingActive = false
+	if conn then
+		conn:Disconnect()
+		conn = nil
+	end
 end
 
--- Initialize character and start fling
+-- auto stop fling on death
 local function setupCharacter(character)
-    hrp, char = getLocalHRP()
-    if not hrp then return end
+	local hrp = character:WaitForChild("HumanoidRootPart", 5)
+	if not hrp then return end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
 
-    local humanoid = char:FindFirstChildWhichIsA("Humanoid")
-    if humanoid then
-        pcall(function()
-            humanoid.PlatformStand = false
-            humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-        end)
+	if humanoid then
+		humanoid.Died:Connect(function()
+			stopFling()
+		end)
+	end
 
-        -- Stop fling permanently when humanoid dies
-        humanoid.Died:Connect(function()
-            stopFling()
-        end)
-    end
-
-    startFling()
+	startFling()
 end
 
--- Only setup fling for current character
+-- start immediately if loaded
 if localPlayer.Character then
-    setupCharacter(localPlayer.Character)
+	setupCharacter(localPlayer.Character)
 end
 
-print("[extreme-fling] active. Targeting player:", _G.targetPlayerName)
+-- listen for respawn
+localPlayer.CharacterAdded:Connect(function(char)
+	if flingActive then
+		task.wait(1)
+		setupCharacter(char)
+	end
+end)
+
+print("[extreme-fling] walkfling-style active, targeting:", _G.targetPlayerName)
